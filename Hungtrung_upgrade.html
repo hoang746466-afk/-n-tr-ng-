@@ -1,0 +1,1945 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Hứng Trứng Farm — Phiên bản Nâng Cấp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FFF8E7;
+    --brown:#5D3A1A;
+    --brown-dark:#3E2723;
+    --yolk:#FFC857;
+    --grass:#7CB342;
+    --grass-dark:#588C2A;
+    --danger:#E63946;
+    --good:#2ecc71;
+    --sky-top:#7EC8E3;
+    --sky-bottom:#FFF3B0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;}
+  body{
+    background:#2c2c2c;
+    font-family:'Fredoka',Arial,sans-serif;
+    display:flex;justify-content:center;align-items:center;
+    height:100vh;overflow:hidden;
+  }
+  #gameContainer{
+    position:relative;width:100vw;max-width:420px;height:100vh;max-height:680px;
+    border:4px solid var(--brown);overflow:hidden;border-radius:14px;
+    background:linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-bottom) 65%, var(--sky-bottom) 100%);
+    transition:background 1.2s ease;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  /* ---------- Lớp chiều sâu (parallax) ---------- */
+  #sun{position:absolute;width:70px;height:70px;border-radius:50%;background:radial-gradient(circle,#fff6cf,var(--yolk));top:30px;right:30px;opacity:.9;filter:blur(.5px);z-index:1;transition:opacity 1s;}
+  .cloud{position:absolute;background:#fff;border-radius:50px;opacity:.85;z-index:2;filter:blur(.2px);}
+  .cloud::before,.cloud::after{content:'';position:absolute;background:#fff;border-radius:50%;}
+  #stars{position:absolute;top:0;left:0;width:100%;height:60%;z-index:1;opacity:0;transition:opacity 1s;pointer-events:none;}
+  .star{position:absolute;width:3px;height:3px;background:#fff;border-radius:50%;}
+  #mountains{position:absolute;bottom:78px;left:0;width:100%;height:90px;z-index:3;opacity:.55;}
+  #mountains svg{width:100%;height:100%;display:block;}
+  #ground{position:absolute;bottom:0;left:0;width:100%;height:78px;background:linear-gradient(to bottom,var(--grass),var(--grass-dark));z-index:5;border-top:4px solid #4a7320;}
+  #fence{position:absolute;bottom:60px;left:0;width:100%;height:30px;z-index:6;opacity:.8;}
+  /* ---------- HUD ---------- */
+  #hud{position:absolute;top:0;left:0;width:100%;display:none;z-index:30;padding:10px;}
+  #topBar{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;}
+  .pill{background:rgba(255,248,231,.92);border:2px solid var(--brown);border-radius:20px;padding:6px 12px;font-weight:700;color:var(--brown-dark);font-size:14px;display:flex;align-items:center;gap:4px;box-shadow:0 2px 0 rgba(0,0,0,.15);}
+  #livesBoard{color:var(--danger);}
+  #comboBoard{position:absolute;top:54px;left:50%;transform:translateX(-50%);font-weight:700;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,.5);font-size:15px;opacity:0;transition:opacity .2s;z-index:30;}
+  #settingBtn{background:rgba(255,248,231,.92);border:2px solid var(--brown);border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;box-shadow:0 2px 0 rgba(0,0,0,.15);}
+  #levelBanner{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%) scale(.5);background:rgba(93,58,26,.92);color:var(--yolk);font-size:26px;font-weight:700;padding:14px 26px;border-radius:14px;opacity:0;z-index:60;transition:all .3s ease;pointer-events:none;text-align:center;}
+  #levelBanner.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+  /* ---------- Vật rơi / giỏ ---------- */
+  .fallItem{position:absolute;font-size:32px;line-height:1;text-align:center;filter:drop-shadow(0 4px 3px rgba(0,0,0,.35));z-index:15;will-change:transform;}
+  #basket{position:absolute;bottom:62px;width:100px;height:100px;background-size:contain;background-repeat:no-repeat;background-position:center;display:none;z-index:20;filter:drop-shadow(0 6px 4px rgba(0,0,0,.35));transition:transform .08s;}
+  #basket.bounce{animation:bounce .25s ease;}
+  @keyframes bounce{0%{transform:scale(1,1)}40%{transform:scale(1.12,.85)}100%{transform:scale(1,1)}}
+  #basket.shake{animation:shake .35s ease;}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px) rotate(-4deg)}75%{transform:translateX(8px) rotate(4deg)}}
+  .popup-text{position:absolute;font-weight:700;pointer-events:none;animation:popUp .7s ease-out forwards;z-index:50;text-shadow:0 2px 3px rgba(0,0,0,.4);font-size:18px;}
+  @keyframes popUp{0%{opacity:1;transform:translateY(0) scale(1);}100%{opacity:0;transform:translateY(-60px) scale(1.3);}}
+  .toast{position:absolute;left:50%;top:18%;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;z-index:55;animation:toastFade 2s ease forwards;white-space:nowrap;}
+  @keyframes toastFade{0%{opacity:0;transform:translateX(-50%) translateY(10px);}15%{opacity:1;transform:translateX(-50%) translateY(0);}80%{opacity:1;}100%{opacity:0;transform:translateX(-50%) translateY(-10px);}}
+  #flash{position:absolute;inset:0;background:var(--danger);opacity:0;z-index:70;pointer-events:none;}
+  #flash.go{animation:flashAnim .4s ease;}
+  @keyframes flashAnim{0%{opacity:.55}100%{opacity:0}}
+  /* ---------- Màn hình (menu / pause / over / skin) ---------- */
+  .screen{position:absolute;inset:0;background:rgba(40,30,20,.55);backdrop-filter:blur(2px);display:flex;flex-direction:column;justify-content:center;align-items:center;color:var(--brown-dark);padding:18px;z-index:100;}
+  .card{background:var(--cream);border:4px solid var(--brown);border-radius:18px;padding:22px 20px;width:100%;max-width:320px;display:flex;flex-direction:column;align-items:center;box-shadow:0 8px 0 rgba(0,0,0,.25);}
+  .card h1{font-size:26px;color:var(--brown-dark);margin-bottom:4px;}
+  .card h2{font-size:20px;color:var(--brown-dark);margin-bottom:10px;}
+  .subtitle{font-size:12px;opacity:.7;margin-bottom:14px;}
+  input[type=text]{padding:10px;border-radius:10px;border:2px solid var(--brown);width:100%;margin-bottom:10px;text-align:center;font-family:inherit;font-size:15px;background:#fff;}
+  button{background:var(--good);color:#fff;border:none;padding:12px 22px;font-size:15px;font-weight:600;border-radius:12px;cursor:pointer;margin:5px;font-family:inherit;box-shadow:0 4px 0 rgba(0,0,0,.2);transition:transform .08s;width:100%;}
+  button:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.2);}
+  button.secondary{background:#7f8c8d;}
+  button.danger{background:var(--danger);}
+  button.outline{background:transparent;border:2px solid var(--brown);color:var(--brown-dark);box-shadow:none;}
+  .btnRow{display:flex;gap:8px;width:100%;}
+  #highScoreBox{width:100%;max-height:140px;background:rgba(0,0,0,.12);border-radius:10px;overflow-y:auto;margin-top:8px;padding:8px;font-size:13px;}
+  #highScoreList div{display:flex;justify-content:space-between;padding:2px 4px;border-radius:6px;}
+  #highScoreList div.me{background:rgba(255,200,87,.5);font-weight:700;}
+  .skinGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;max-height:260px;overflow-y:auto;margin:10px 0;}
+  .skin-item{border:3px solid var(--brown);border-radius:10px;padding:6px;cursor:pointer;text-align:center;font-size:11px;background:#fff;display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .skin-item.selected{border-color:var(--good);background:#eafff0;}
+  .skin-thumb{width:48px;height:48px;background-size:contain;background-repeat:no-repeat;background-position:center;font-size:30px;display:flex;align-items:center;justify-content:center;}
+  .row{display:flex;align-items:center;gap:8px;width:100%;margin:6px 0;font-size:13px;}
+  .row input[type=range]{flex:1;}
+  #statsGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;margin:12px 0;font-size:13px;}
+  #statsGrid div{background:rgba(0,0,0,.08);border-radius:8px;padding:8px;text-align:center;}
+  #statsGrid b{display:block;font-size:18px;color:var(--brown-dark);}
+  .muted{opacity:.7;font-size:11px;text-align:center;margin-top:6px;}
+  .iconBtn{width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;}
+  .diffRow{display:flex;gap:6px;width:100%;margin-bottom:10px;}
+  .diffBtn{background:#fff;color:var(--brown-dark);border:2px solid var(--brown);box-shadow:none;font-size:12px;padding:8px 4px;}
+  .diffBtn.active{background:var(--yolk);border-color:var(--brown-dark);}
+  #achLine{cursor:pointer;text-decoration:underline;}
+  #achPanel{display:none;width:100%;max-height:160px;overflow-y:auto;background:rgba(0,0,0,.08);border-radius:10px;padding:8px;margin-top:6px;font-size:12px;text-align:left;}
+  #achPanel div{padding:3px 0;opacity:.45;}
+  #achPanel div.unlocked{opacity:1;font-weight:600;}
+  #countdownOverlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:90px;font-weight:700;color:#fff;text-shadow:0 4px 16px rgba(0,0,0,.65);z-index:80;background:rgba(0,0,0,.35);}
+  #countdownOverlay span{display:inline-block;animation:cdPop .55s cubic-bezier(.18,.89,.32,1.28) both;}
+  @keyframes cdPop{0%{transform:scale(2.2);opacity:0;}60%{transform:scale(.88);opacity:1;}100%{transform:scale(1);opacity:1;}}
+
+  /* 🟡 LEVEL PROGRESS BAR */
+  #levelProgressWrap{width:calc(100% - 20px);margin:5px auto 0;height:8px;background:rgba(93,58,26,.22);border-radius:10px;overflow:hidden;border:1px solid rgba(93,58,26,.28);}
+  #levelProgressFill{height:100%;width:0%;background:linear-gradient(to right,var(--yolk),#ff8c00);border-radius:10px;transition:width .35s ease;}
+
+  /* 🟢 COMBO TIMER BAR */
+  #comboTimerBar{position:absolute;top:83px;left:50%;transform:translateX(-50%);width:150px;height:5px;background:rgba(255,255,255,.18);border-radius:4px;overflow:hidden;opacity:0;transition:opacity .2s;z-index:30;}
+  #comboTimerFill{height:100%;width:100%;background:linear-gradient(to right,#ff8c00,#ffd700);border-radius:4px;}
+
+  /* ===== BOSS GÀ MÁI ===== */
+  #bossDialog{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:90;background:rgba(0,0,0,.6);}
+  #bossDialogBox{background:#fff8e7;border:4px solid #5d3a1a;border-radius:18px;padding:20px 24px;max-width:80%;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.4);}
+  #bossDialogChicken{font-size:72px;animation:bossShake .5s infinite alternate;}
+  @keyframes bossShake{0%{transform:rotate(-8deg) scale(1.05);}100%{transform:rotate(8deg) scale(1.12);}}
+  #bossDialogText{font-size:18px;font-weight:700;color:#5d3a1a;margin-top:10px;line-height:1.5;}
+  #bossHealthBar{position:absolute;top:56px;left:50%;transform:translateX(-50%);display:none;z-index:31;width:70%;max-width:260px;}
+  #bossHealthLabel{font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);text-align:center;margin-bottom:3px;}
+  #bossHealthTrack{background:rgba(0,0,0,.4);border-radius:10px;height:14px;width:100%;border:2px solid #fff;overflow:hidden;}
+  #bossHealthFill{height:100%;background:linear-gradient(to right,#ff4757,#ff6b81);border-radius:8px;transition:width .3s;}
+  #bossChickenEl{position:absolute;font-size:62px;z-index:25;pointer-events:none;top:-40px;left:50%;transform:translateX(-50%);transition:filter .1s;}
+  #bossChickenEl.dive{animation:bossDive .45s ease-in forwards;}
+  #bossChickenEl.retreat{animation:bossRetreat .55s ease-out forwards;}
+  @keyframes bossDive{0%{top:-40px;transform:translateX(-50%) rotate(0deg);}100%{transform:translateX(-50%) rotate(15deg);}}
+  @keyframes bossRetreat{0%{transform:translateX(-50%) rotate(15deg);}100%{top:-40px;transform:translateX(-50%) rotate(0deg);}}
+  #bossVictoryOverlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:90;background:rgba(0,0,0,.55);}
+  #bossVictoryBox{background:#fff8e7;border:4px solid #5d3a1a;border-radius:18px;padding:24px 28px;text-align:center;max-width:82%;}
+  #bossVictoryBox h2{font-size:22px;color:#5d3a1a;margin-bottom:8px;}
+  #bossVictoryBox p{font-size:14px;color:#5d3a1a;opacity:.8;}
+
+  /* ===== LOGIN SCREEN ===== */
+  #loginScreen{position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;background:linear-gradient(160deg,#7EC8E3 0%,#FFF3B0 60%,#7CB342 100%);}
+  #loginCard{background:rgba(255,248,231,.97);border:4px solid var(--brown);border-radius:22px;padding:26px 22px 20px;width:100%;max-width:320px;display:flex;flex-direction:column;align-items:center;box-shadow:0 10px 0 rgba(0,0,0,.2);}
+  #loginCard .logo{font-size:52px;margin-bottom:4px;animation:eggBounce 1.2s ease-in-out infinite alternate;}
+  @keyframes eggBounce{0%{transform:translateY(0) rotate(-5deg);}100%{transform:translateY(-8px) rotate(5deg);}}
+  #loginCard h1{font-size:22px;color:var(--brown-dark);margin-bottom:2px;}
+  #loginCard .tagline{font-size:11px;color:var(--brown);opacity:.75;margin-bottom:18px;}
+  .socialBtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px 16px;border-radius:14px;border:none;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;margin:6px 0;box-shadow:0 4px 0 rgba(0,0,0,.18);transition:transform .08s,box-shadow .08s;letter-spacing:.3px;}
+  .socialBtn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.18);}
+  .socialBtn .icon{width:24px;height:24px;flex-shrink:0;}
+  .btn-google{background:#fff;color:#3c4043;border:2px solid #dadce0;}
+  .btn-facebook{background:#1877F2;color:#fff;}
+  .divider{width:100%;display:flex;align-items:center;gap:8px;margin:10px 0;font-size:11px;color:var(--brown);opacity:.6;}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--brown);opacity:.3;}
+  #guestInput{padding:10px;border-radius:10px;border:2px solid var(--brown);width:100%;text-align:center;font-family:inherit;font-size:14px;background:#fff;margin-bottom:8px;}
+  .btn-guest{background:var(--good);color:#fff;border:none;width:100%;padding:12px;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.18);transition:transform .08s;}
+  .btn-guest:active{transform:translateY(3px);}
+  .privacy-note{font-size:10px;color:var(--brown);opacity:.55;text-align:center;margin-top:10px;line-height:1.5;}
+
+  /* ===== USER AVATAR IN HUD ===== */
+  #userAvatar{width:32px;height:32px;border-radius:50%;border:2px solid var(--brown);background:var(--yolk);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--brown-dark);overflow:hidden;flex-shrink:0;}
+  #userAvatar img{width:100%;height:100%;object-fit:cover;}
+  #userPill{display:flex;align-items:center;gap:6px;background:rgba(255,248,231,.92);border:2px solid var(--brown);border-radius:20px;padding:4px 10px 4px 6px;font-weight:700;color:var(--brown-dark);font-size:12px;box-shadow:0 2px 0 rgba(0,0,0,.15);}
+
+  /* ===== PROFILE SCREEN ===== */
+  #profileScreen{display:none;}
+  .profileAvatar{width:64px;height:64px;border-radius:50%;border:3px solid var(--brown);background:var(--yolk);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:var(--brown-dark);overflow:hidden;margin-bottom:8px;}
+  .profileAvatar img{width:100%;height:100%;object-fit:cover;}
+  .providerBadge{font-size:10px;padding:3px 8px;border-radius:10px;font-weight:600;margin-bottom:10px;}
+  .badge-google{background:#e8f0fe;color:#1a73e8;}
+  .badge-facebook{background:#e7f0ff;color:#1877F2;}
+  .badge-guest{background:#f0f0f0;color:#555;}
+  #profileStats{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;margin:10px 0;}
+  #profileStats div{background:rgba(0,0,0,.07);border-radius:10px;padding:8px;text-align:center;font-size:12px;}
+  #profileStats b{display:block;font-size:20px;color:var(--brown-dark);}
+  .btn-logout{background:#e74c3c;color:#fff;border:none;width:100%;padding:11px;border-radius:12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.2);transition:transform .08s;margin-top:6px;}
+  .btn-logout:active{transform:translateY(2px);}
+  #syncStatus{font-size:10px;text-align:center;margin-top:6px;opacity:.6;color:var(--brown);}
+</style>
+</head>
+<body>
+
+<div id="gameContainer">
+
+  <!-- Lớp nền chiều sâu -->
+  <div id="sun"></div>
+  <div id="stars"></div>
+  <div id="mountains">
+    <svg viewBox="0 0 400 90" preserveAspectRatio="none"><polygon points="0,90 60,20 140,90" fill="#557a3a"/><polygon points="90,90 180,10 260,90" fill="#4a6b32"/><polygon points="220,90 300,30 400,90" fill="#3e5a2a"/></svg>
+  </div>
+  <div id="fence">
+    <svg width="100%" height="100%" viewBox="0 0 400 30" preserveAspectRatio="none">
+      <line x1="0" y1="6" x2="400" y2="6" stroke="#7a4a23" stroke-width="3"/>
+      <line x1="0" y1="18" x2="400" y2="18" stroke="#7a4a23" stroke-width="3"/>
+      <g stroke="#5d3a1a" stroke-width="4">
+        <line x1="10" y1="0" x2="10" y2="30"/><line x1="50" y1="0" x2="50" y2="30"/><line x1="90" y1="0" x2="90" y2="30"/>
+        <line x1="130" y1="0" x2="130" y2="30"/><line x1="170" y1="0" x2="170" y2="30"/><line x1="210" y1="0" x2="210" y2="30"/>
+        <line x1="250" y1="0" x2="250" y2="30"/><line x1="290" y1="0" x2="290" y2="30"/><line x1="330" y1="0" x2="330" y2="30"/>
+        <line x1="370" y1="0" x2="370" y2="30"/>
+      </g>
+    </svg>
+  </div>
+  <div id="ground"></div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="topBar">
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div class="pill" id="scoreBoard">⭐ <span id="score">0</span></div>
+        <div class="pill" id="livesBoard">❤️ <span id="lives">3</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+        <div class="pill" id="levelBoard">🌾 Lv.<span id="level">1</span></div>
+        <div id="settingBtn">⚙️</div>
+      </div>
+    </div>
+    <div id="levelProgressWrap"><div id="levelProgressFill"></div></div>
+  </div>
+  <div id="comboBoard"></div>
+  <div id="comboTimerBar"><div id="comboTimerFill"></div></div>
+  <div id="levelBanner"></div>
+  <div id="flash"></div>
+
+  <div id="basket"></div>
+  <div id="countdownOverlay">3</div>
+
+  <!-- BOSS GÀ MÁI -->
+  <div id="bossDialog" style="display:none;flex-direction:column;align-items:center;justify-content:center;">
+    <div id="bossDialogBox">
+      <div id="bossDialogChicken">🐔</div>
+      <div id="bossDialogText">"Chúng mày đã ăn quá nhiều trứng!"</div>
+    </div>
+  </div>
+  <div id="bossHealthBar">
+    <div id="bossHealthLabel">🐔 Gà Mái BOSS</div>
+    <div id="bossHealthTrack"><div id="bossHealthFill" style="width:100%;"></div></div>
+  </div>
+  <div id="bossChickenEl" style="display:none;">🐔</div>
+  <div id="bossVictoryOverlay" style="display:none;flex-direction:column;align-items:center;justify-content:center;">
+    <div id="bossVictoryBox">
+      <h2>🎉 Chiến thắng!</h2>
+      <div style="font-size:48px;margin:10px 0;">🍳</div>
+      <p>Gà mái đã bỏ chạy!<br>Tiếp tục hứng trứng thôi!</p>
+    </div>
+  </div>
+
+  <!-- ===== LOGIN SCREEN ===== -->
+  <div id="loginScreen">
+    <div id="loginCard">
+      <div class="logo">🐔</div>
+      <h1>HỨNG TRỨNG FARM</h1>
+      <div class="tagline">Đăng nhập để lưu điểm & cạnh tranh bảng xếp hạng!</div>
+
+      <!-- Google -->
+      <button class="socialBtn btn-google" id="loginGoogle">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Đăng nhập bằng Google
+      </button>
+
+      <!-- Facebook -->
+      <button class="socialBtn btn-facebook" id="loginFacebook">
+        <svg class="icon" viewBox="0 0 24 24" fill="white"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.791-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.887v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
+        Đăng nhập bằng Facebook
+      </button>
+
+      <div class="divider">hoặc chơi như khách</div>
+
+      <input type="text" id="guestInput" placeholder="Nhập tên của bạn..." maxlength="12">
+      <button class="btn-guest" id="loginGuest">🎮 Chơi Ngay</button>
+
+      <div class="privacy-note">🔒 Thông tin của bạn chỉ được lưu trên thiết bị này.<br>Không chia sẻ với bên thứ ba.</div>
+    </div>
+  </div>
+
+  <!-- ===== PROFILE SCREEN (overlay) ===== -->
+  <div id="profileScreen" class="screen">
+    <div class="card">
+      <div class="profileAvatar" id="profileAvatarEl"></div>
+      <div style="font-size:16px;font-weight:700;color:var(--brown-dark);" id="profileNameEl"></div>
+      <div class="providerBadge" id="profileBadgeEl"></div>
+      <div id="profileStats">
+        <div>Điểm cao nhất<br><b id="pBest">0</b></div>
+        <div>Tổng ván<br><b id="pGames">0</b></div>
+        <div>Combo max<br><b id="pCombo">0</b></div>
+        <div>Cấp cao nhất<br><b id="pLevel">0</b></div>
+      </div>
+      <button class="btn-logout" id="logoutBtn">🚪 Đăng xuất</button>
+      <div id="syncStatus">💾 Dữ liệu lưu trên thiết bị này</div>
+      <button class="outline" id="closeProfileBtn" style="margin-top:8px;background:transparent;border:2px solid var(--brown);color:var(--brown-dark);box-shadow:none;padding:10px;border-radius:12px;width:100%;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;">← Quay lại</button>
+    </div>
+  </div>
+
+  <!-- MENU -->
+  <div id="menuScreen" class="screen">
+    <div class="card">
+      <div style="position:absolute;top:14px;right:14px;display:flex;gap:6px;">
+        <div id="settingBtnMenu" class="iconBtn">⚙️</div>
+        <div id="muteBtn" class="iconBtn">🔊</div>
+      </div>
+      <!-- User pill top-left -->
+      <div style="position:absolute;top:14px;left:14px;" id="userPillWrap">
+        <div id="userPill" style="cursor:pointer;" id="profileOpenBtn">
+          <div id="userAvatar"><span id="avatarInitial">?</span></div>
+          <span id="userDisplayName">Khách</span>
+        </div>
+      </div>
+      <h1>🐔 HỨNG TRỨNG FARM</h1>
+      <div class="subtitle">Hứng trứng, tránh bom, dựng combo!</div>
+      <div class="muted" id="bestScoreLine">Điểm cao nhất: 0</div>
+      <input type="text" id="playerName" placeholder="Tên bạn..." maxlength="12" style="display:none;">
+      <div class="diffRow" id="diffRow">
+        <button class="diffBtn" data-diff="easy">😌 Dễ</button>
+        <button class="diffBtn" data-diff="normal">🙂 Thường</button>
+        <button class="diffBtn" data-diff="hard">🔥 Khó</button>
+      </div>
+      <button id="playBtn">▶ CHƠI NGAY</button>
+      <div class="btnRow">
+        <button class="secondary" id="skinBtnMenu">👤 SKIN</button>
+        <button class="secondary" id="howToBtn">❓ CÁCH CHƠI</button>
+      </div>
+      <div id="achLine" class="muted">🏅 Thành tích: 0/8</div>
+      <div id="achPanel"></div>
+      <div id="highScoreBox"><h4 style="margin-bottom:4px;">🏆 BẢNG XẾP HẠNG</h4><div id="highScoreList"></div></div>
+    </div>
+  </div>
+
+  <!-- HƯỚNG DẪN -->
+  <div id="howToScreen" class="screen" style="display:none;">
+    <div class="card">
+      <h2>❓ CÁCH CHƠI</h2>
+      <div style="font-size:13px;line-height:1.7;width:100%;text-align:left;">
+        🥚 Trứng thường: +1 điểm<br>
+        🌟 Trứng vàng: +5 điểm (hiếm)<br>
+        💣 Bom: mất 1 mạng — đừng hứng!<br>
+        ❤️ Tim: +1 mạng (tối đa 5)<br>
+        ⚡ Sét: nhân đôi điểm trong 5s<br>
+        🔥 Bắt liên tiếp để tăng <b>combo nhân điểm</b>!<br>
+        Kéo / vuốt để di chuyển giỏ. Trên máy tính dùng phím ← → hoặc rê chuột.
+      </div>
+      <button id="backFromHowToBtn">QUAY LẠI</button>
+    </div>
+  </div>
+
+  <!-- SKIN -->
+  <div id="skinScreen" class="screen" style="display:none;">
+    <div class="card">
+      <h2>👤 CHỌN SKIN</h2>
+      <div class="skinGrid" id="skinList"></div>
+      <button id="doneSkinBtn">XONG</button>
+    </div>
+  </div>
+
+  <!-- PAUSE / SETTINGS -->
+  <div id="settingScreen" class="screen" style="display:none;">
+    <div class="card">
+      <h2>⏸ TẠM DỪNG</h2>
+      <div class="row">🎵 Nhạc nền<input type="range" id="volMusic" min="0" max="1" step="0.1" value="0.4"></div>
+      <div class="row">🔊 Hiệu ứng<input type="range" id="volSFX" min="0" max="1" step="0.1" value="1.0"></div>
+      <button id="resumeBtn">▶ TIẾP TỤC</button>
+      <button class="secondary" id="restartBtn">🔄 CHƠI LẠI</button>
+      <button class="danger" id="quitBtn">🏠 VỀ TRANG CHỦ</button>
+      <button class="outline" id="closeSettingsBtn" style="display:none;">ĐÓNG</button>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="overScreen" class="screen" style="display:none;">
+    <div class="card">
+      <h2>💀 GAME OVER</h2>
+      <div id="statsGrid">
+        <div>Điểm<br><b id="overScore">0</b></div>
+        <div>Cấp độ<br><b id="overLevel">1</b></div>
+        <div>Combo cao nhất<br><b id="overCombo">0</b></div>
+        <div>Điểm cao nhất<br><b id="overBest">0</b></div>
+      </div>
+      <div id="newRecord" class="muted" style="display:none;color:var(--good);font-weight:700;">🎉 Kỷ lục mới!</div>
+      <button id="retryBtn">🔄 CHƠI LẠI</button>
+      <button class="secondary" id="homeBtn">🏠 VỀ TRANG CHỦ</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- 🔥 Firebase CDN -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCD9cHTOnrnkvnt32qHyl8YebZ9zsH_Vr8",
+  authDomain: "sever-game-a33e9.firebaseapp.com",
+  projectId: "sever-game-a33e9",
+  storageBucket: "sever-game-a33e9.firebasestorage.app",
+  messagingSenderId: "743434791690",
+  appId: "1:743434791690:web:6bdab5a04b3fb8d24ee8f3",
+  measurementId: "G-ZW2Z18PC8P"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+
+// Expose ra window để script bên dưới dùng
+window._fbAuth = auth;
+window._fbGoogleProvider = googleProvider;
+window._fbSignInWithPopup = signInWithPopup;
+window._fbSignOut = signOut;
+window._fbOnAuthStateChanged = onAuthStateChanged;
+window._fbReady = true;
+
+// Lắng nghe trạng thái đăng nhập Firebase
+onAuthStateChanged(auth, async (fbUser) => {
+  if(fbUser){
+    // Đã đăng nhập — build user object
+    const user = {
+      id: 'g_' + fbUser.uid,
+      name: fbUser.displayName || fbUser.email || 'Người dùng',
+      provider: 'google',
+      avatar: fbUser.photoURL || null,
+      avatarColor: '#4285F4',
+      initial: (fbUser.displayName||'U')[0].toUpperCase()
+    };
+    window._htCurrentUser = user;
+    localStorage.setItem('ht_user', JSON.stringify(user));
+    localStorage.setItem('playerName', user.name);
+    if(window._htOnLogin) await window._htOnLogin(user);
+  } else {
+    window._htCurrentUser = null;
+    if(window._htOnLogout) window._htOnLogout();
+  }
+});
+</script>
+
+<!-- 🟡 Music generated via WebAudio — no external host -->
+
+<script>
+/* ===================== AUTH & STORAGE SYSTEM ===================== */
+const Auth = (()=>{
+  let _user = null;
+
+  function restoreSession(){
+    // Firebase onAuthStateChanged sẽ tự restore, không cần làm thêm
+    _user = window._htCurrentUser || null;
+    return _user;
+  }
+
+  async function loginGoogle(){
+    showAuthLoading('Google');
+    try {
+      const result = await window._fbSignInWithPopup(window._fbAuth, window._fbGoogleProvider);
+      const fbUser = result.user;
+      const user = {
+        id: 'g_' + fbUser.uid,
+        name: fbUser.displayName || fbUser.email || 'Người dùng',
+        provider: 'google',
+        avatar: fbUser.photoURL || null,
+        avatarColor: '#4285F4',
+        initial: (fbUser.displayName||'U')[0].toUpperCase()
+      };
+      _user = user;
+      hideAuthLoading();
+      return user;
+    } catch(e){
+      hideAuthLoading();
+      alert('Đăng nhập thất bại: ' + (e.message||e));
+      throw e;
+    }
+  }
+
+  // Facebook tạm thời chưa cấu hình trong Firebase → fallback khách
+  async function loginFacebook(){
+    alert('Facebook login chưa được bật trong Firebase Console.\nBạn vui lòng dùng Google hoặc chơi như khách!');
+    return null;
+  }
+
+  function loginGuest(name){
+    const trimmed = (name||'').trim() || 'Khách';
+    const user = {
+      id: 'guest_' + Date.now(),
+      name: trimmed,
+      provider: 'guest',
+      avatar: null,
+      avatarColor: '#7CB342',
+      initial: trimmed[0].toUpperCase()
+    };
+    _user = user;
+    localStorage.setItem('ht_user', JSON.stringify(user));
+    return user;
+  }
+
+  async function logout(){
+    _user = null;
+    localStorage.removeItem('ht_user');
+    if(window._fbAuth) await window._fbSignOut(window._fbAuth);
+  }
+
+  function current(){ return window._htCurrentUser || _user; }
+
+  let _loadingEl = null;
+  function showAuthLoading(provider){
+    _loadingEl = document.createElement('div');
+    _loadingEl.style.cssText = 'position:absolute;inset:0;z-index:300;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#fff;font-family:Fredoka,sans-serif;font-size:16px;font-weight:700;border-radius:14px;';
+    _loadingEl.innerHTML = `<div style="font-size:40px;animation:spin .8s linear infinite;">⏳</div>Đang kết nối ${provider}...`;
+    const style = document.createElement('style');
+    style.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(style);
+    document.getElementById('gameContainer').appendChild(_loadingEl);
+  }
+  function hideAuthLoading(){
+    if(_loadingEl){ _loadingEl.remove(); _loadingEl=null; }
+  }
+
+  return { loginGoogle, loginFacebook, loginGuest, logout, current, restoreSession };
+})();
+
+/* ===================== PLAYER DATA STORAGE ===================== */
+const PlayerData = (()=>{
+  function key(userId){ return 'ht_pdata_' + userId; }
+
+  async function load(userId){
+    // Try window.storage first (persistent across sessions in artifact)
+    if(window.storage){
+      try {
+        const res = await window.storage.get(key(userId));
+        if(res && res.value) return JSON.parse(res.value);
+      } catch(e){}
+    }
+    // Fallback to localStorage
+    try {
+      const raw = localStorage.getItem(key(userId));
+      if(raw) return JSON.parse(raw);
+    } catch(e){}
+    return { bestScore:0, totalGames:0, bestCombo:0, bestLevel:0, achievements:[], leaderboard:[] };
+  }
+
+  async function save(userId, data){
+    const str = JSON.stringify(data);
+    // Save to both storages
+    localStorage.setItem(key(userId), str);
+    if(window.storage){
+      try { await window.storage.set(key(userId), str); } catch(e){}
+    }
+  }
+
+  return { load, save };
+})();
+
+// Global current player data
+window._htPlayerData = null;
+window._htSavingData = false;
+
+async function loadPlayerData(){
+  const user = Auth.current();
+  if(!user) return;
+  window._htPlayerData = await PlayerData.load(user.id);
+  // Sync leaderboard and best score from player data into localStorage globals
+  const pd = window._htPlayerData;
+  if(pd.bestScore > parseInt(localStorage.getItem('bestScore')||'0')){
+    localStorage.setItem('bestScore', String(pd.bestScore));
+  }
+  if(pd.achievements && pd.achievements.length){
+    const cur = JSON.parse(localStorage.getItem('achievements')||'[]');
+    const merged = [...new Set([...cur,...pd.achievements])];
+    localStorage.setItem('achievements', JSON.stringify(merged));
+  }
+  if(pd.leaderboard && pd.leaderboard.length){
+    // Merge leaderboards
+    const cur = JSON.parse(localStorage.getItem('leaderboard')||'[]');
+    const map = {};
+    [...cur,...pd.leaderboard].forEach(e=>{ if(!map[e.name]||e.score>map[e.name].score) map[e.name]=e; });
+    localStorage.setItem('leaderboard', JSON.stringify(Object.values(map)));
+  }
+}
+
+async function savePlayerData(){
+  const user = Auth.current();
+  const pd = window._htPlayerData;
+  if(!user || !pd) return;
+  pd.leaderboard = JSON.parse(localStorage.getItem('leaderboard')||'[]');
+  pd.achievements = JSON.parse(localStorage.getItem('achievements')||'[]');
+  pd.bestScore = Math.max(pd.bestScore, parseInt(localStorage.getItem('bestScore')||'0'));
+  await PlayerData.save(user.id, pd);
+}
+
+/* ===================== AUTH UI ===================== */
+function updateUserUI(){
+  const user = Auth.current();
+  if(!user) return;
+
+  const avatarEl = document.getElementById('userAvatar');
+  const nameEl = document.getElementById('userDisplayName');
+  if(nameEl) nameEl.textContent = user.name.split(' ').slice(-1)[0];
+  if(avatarEl){
+    if(user.avatar){
+      avatarEl.style.background = 'transparent';
+      avatarEl.innerHTML = `<img src="${user.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+    } else {
+      avatarEl.style.background = user.avatarColor || '#FFC857';
+      avatarEl.innerHTML = `<span style="color:#fff;font-size:14px;font-weight:700;">${user.initial||user.name[0]}</span>`;
+    }
+  }
+}
+
+function openProfileScreen(){
+  const user = Auth.current();
+  const pd = window._htPlayerData || {};
+  if(!user) return;
+
+  const ava = document.getElementById('profileAvatarEl');
+  if(ava){
+    if(user.avatar){
+      ava.style.background='transparent';
+      ava.innerHTML=`<img src="${user.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+    } else {
+      ava.style.background = user.avatarColor;
+      ava.innerHTML = `<span style="color:#fff;font-size:26px;font-weight:700;">${user.initial||user.name[0]}</span>`;
+    }
+  }
+  const nameEl = document.getElementById('profileNameEl');
+  if(nameEl) nameEl.textContent = user.name;
+
+  const badge = document.getElementById('profileBadgeEl');
+  if(badge){
+    const badges = {google:'🔵 Google', facebook:'🔷 Facebook', guest:'👤 Khách'};
+    const cls = {google:'badge-google', facebook:'badge-facebook', guest:'badge-guest'};
+    badge.textContent = badges[user.provider]||'👤';
+    badge.className = 'providerBadge ' + (cls[user.provider]||'badge-guest');
+  }
+
+  document.getElementById('pBest').textContent = pd.bestScore || localStorage.getItem('bestScore') || 0;
+  document.getElementById('pGames').textContent = pd.totalGames || 0;
+  document.getElementById('pCombo').textContent = pd.bestCombo || 0;
+  document.getElementById('pLevel').textContent = pd.bestLevel || 0;
+
+  // Show
+  document.getElementById('menuScreen').style.display='none';
+  document.getElementById('profileScreen').style.display='flex';
+}
+
+function closeProfileScreen(){
+  document.getElementById('profileScreen').style.display='none';
+  document.getElementById('menuScreen').style.display='flex';
+}
+
+// LOGIN SCREEN handlers
+document.getElementById('loginGoogle').onclick = async ()=>{
+  const user = await Auth.loginGoogle();
+  await loadPlayerData();
+  localStorage.setItem('playerName', user.name);
+  document.getElementById('loginScreen').style.display='none';
+  updateUserUI();
+  // show menu
+  document.getElementById('menuScreen').style.display='flex';
+};
+
+document.getElementById('loginFacebook').onclick = async ()=>{
+  const user = await Auth.loginFacebook();
+  await loadPlayerData();
+  localStorage.setItem('playerName', user.name);
+  document.getElementById('loginScreen').style.display='none';
+  updateUserUI();
+  document.getElementById('menuScreen').style.display='flex';
+};
+
+document.getElementById('loginGuest').onclick = async ()=>{
+  const nameVal = document.getElementById('guestInput').value.trim();
+  const user = Auth.loginGuest(nameVal);
+  await loadPlayerData();
+  localStorage.setItem('playerName', user.name);
+  document.getElementById('loginScreen').style.display='none';
+  updateUserUI();
+  document.getElementById('menuScreen').style.display='flex';
+};
+
+document.getElementById('guestInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('loginGuest').click();
+});
+
+document.getElementById('userPill').onclick = ()=>{ openProfileScreen(); };
+
+document.getElementById('logoutBtn').onclick = async ()=>{
+  await savePlayerData();
+  Auth.logout();
+  window._htPlayerData = null;
+  // Reset state
+  localStorage.removeItem('playerName');
+  closeProfileScreen();
+  document.getElementById('menuScreen').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+};
+
+document.getElementById('closeProfileBtn').onclick = ()=>{ closeProfileScreen(); };
+
+// Callback khi Firebase xác nhận đăng nhập
+window._htOnLogin = async (user) => {
+  await loadPlayerData();
+  updateUserUI();
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('menuScreen').style.display='flex';
+};
+
+window._htOnLogout = () => {
+  document.getElementById('menuScreen').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+};
+
+// Init: chờ Firebase kiểm tra session (tối đa 2.5s rồi show login)
+(()=>{
+  let resolved = false;
+  const waitForFirebase = setInterval(()=>{
+    if(window._fbReady){
+      clearInterval(waitForFirebase);
+      // Firebase onAuthStateChanged sẽ tự gọi _htOnLogin nếu đã đăng nhập
+      // Nếu sau 2.5s chưa thấy user → show login
+      if(!resolved) setTimeout(()=>{
+        if(!Auth.current()){
+          document.getElementById('menuScreen').style.display='none';
+          document.getElementById('loginScreen').style.display='flex';
+        }
+        resolved = true;
+      }, 2500);
+    }
+  }, 100);
+
+  // Nếu Firebase không load được sau 5s → show login
+  setTimeout(()=>{
+    clearInterval(waitForFirebase);
+    if(!resolved){
+      resolved = true;
+      document.getElementById('menuScreen').style.display='none';
+      document.getElementById('loginScreen').style.display='flex';
+    }
+  }, 5000);
+})();
+</script>
+
+<script>
+(function(){
+'use strict';
+
+/* ===================== CẤU HÌNH ===================== */
+const SKINS = [
+  {url:'https://i.postimg.cc/k57tdmGJ/nhanvat.png', name:'Ngọc', emoji:'🧺'},
+  {url:'https://i.postimg.cc/bd2DPw85/h-i.png', name:'Hải', emoji:'🧺'},
+  {url:'https://i.postimg.cc/2LCfgyTT/nhi.png', name:'Nhi', emoji:'🧺'},
+  {url:'https://i.postimg.cc/DmQbMtmj/bac.png', name:'Bắc', emoji:'🧺'},
+  {url:'https://i.postimg.cc/fkv3y94b/huy.png', name:'Huy', emoji:'🧺'},
+  {url:'https://i.postimg.cc/HcqtL8Fc/huong.png', name:'Hương', emoji:'🧺'}
+];
+
+const ITEM_TYPES = [
+  {key:'egg',    emoji:'🥚', weight:62, score:1, life:0, kind:'good'},
+  {key:'gold',   emoji:'🌟', weight:8,  score:5, life:0, kind:'good'},
+  {key:'bomb',   emoji:'💣', weight:20, score:0, life:-1,kind:'bad'},
+  {key:'heart',  emoji:'❤️', weight:5,  score:0, life:1, kind:'good'},
+  {key:'bolt',   emoji:'⚡', weight:5,  score:0, life:0, kind:'buff'}
+];
+
+const BOSS_ITEM_TYPES = [
+  {key:'bomb_w',  emoji:'💣', weight:35, dmg:20, kind:'weapon', label:'Bom'},
+  {key:'pan',     emoji:'🍳', weight:25, dmg:30, kind:'weapon', label:'Chảo'},
+  {key:'chili',   emoji:'🌶️', weight:20, dmg:15, kind:'weapon', label:'Ớt'},
+  {key:'stone',   emoji:'🪨', weight:20, dmg:10, kind:'weapon', label:'Đá'},
+];
+const BOSS_HAZARD_TYPES = [
+  {key:'egg_bad', emoji:'🥚', weight:60, kind:'hazard'},
+  {key:'poop',    emoji:'💩', weight:40, kind:'hazard'},
+];
+
+const MAX_LIVES = 5;
+const BASKET_W = 100, BASKET_H = 100, BASKET_BOTTOM = 62;
+const DAY_THEMES = [
+  {top:'#7EC8E3', bottom:'#FFF3B0', sun:1, stars:0, label:'Ban ngày'},
+  {top:'#F08A5D', bottom:'#FFCDA3', sun:.8, stars:0, label:'Hoàng hôn'},
+  {top:'#1B2A4A', bottom:'#3B4B78', sun:0, stars:1, label:'Ban đêm'},
+  {top:'#A0C4E8', bottom:'#FFE5B4', sun:.5, stars:.2, label:'Bình minh'}
+];
+const DIFFICULTY = {
+  easy:   {label:'Dễ',     speedMult:0.78,  spawnMult:1.22, bombWeight:12, startLives:4},
+  normal: {label:'Thường', speedMult:1.05,  spawnMult:1.0,  bombWeight:26, startLives:3},
+  hard:   {label:'Khó',    speedMult:1.65,  spawnMult:0.60, bombWeight:40, startLives:3}
+};
+const ACHIEVEMENTS = [
+  {key:'first_egg', label:'Hứng quả trứng đầu tiên'},
+  {key:'score50',   label:'Đạt 50 điểm trong 1 trận'},
+  {key:'score100',  label:'Đạt 100 điểm trong 1 trận'},
+  {key:'score200',  label:'Đạt 200 điểm trong 1 trận'},
+  {key:'combo10',   label:'Đạt combo x10'},
+  {key:'level5',    label:'Lên tới cấp 5'},
+  {key:'level10',   label:'Lên tới cấp 10'},
+  {key:'goldEgg',   label:'Hứng được trứng vàng 🌟'}
+];
+
+/* ===================== TRẠNG THÁI ===================== */
+let state = 'menu';
+let score=0, lives=3, level=1, combo=0, best=0;
+let bestCombo=0;
+let multiplierBoostUntil=0;
+let comboTimeoutId=null;       // 🟢 combo timeout id
+const COMBO_TIMEOUT_MS=3000;   // 🟢 inactivity window (ms)
+let items=[]; 
+let itemPool = []; // Object pool
+let basketX=0;
+let cW=380, cH=640;
+let rafId=null, spawnTimer=null;
+let lastTs=0;
+let keysDown={};
+let dragging=false;
+let difficulty = localStorage.getItem('difficulty') || 'normal';
+let muted = localStorage.getItem('muted')==='1';
+let settingsFromMenu = false;
+
+/* ===== BOSS VARIABLES ===== */
+let bossActive = false;
+let bossHP = 0;
+let bossMaxHP = 0;
+let bossChickenX = 0;
+let bossChickenY = -40;
+let bossDiveTarget = 0;
+let bossDiveTimer = null;
+let bossPhase = 'idle';
+let bossHasTriggered = false;
+
+const $ = id=>document.getElementById(id);
+const container = $('gameContainer');
+const basket = $('basket');
+const hud = $('hud');
+
+/* ===================== ÂM THANH ===================== */
+let audioCtx=null;
+function ensureAudio(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audioCtx=null; }
+  }
+  if(audioCtx && audioCtx.state==='suspended') audioCtx.resume().catch(()=>{});
+}
+function sfx(type){
+  if(muted) return;
+  ensureAudio();
+  if(!audioCtx) return;
+  const vol = parseFloat($('volSFX').value || 1);
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  gain.gain.value = vol;
+  const t = audioCtx.currentTime;
+  if(type==='catch'){
+    osc.frequency.setValueAtTime(700,t); osc.frequency.exponentialRampToValueAtTime(1100,t+0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, t+0.18);
+  } else if(type==='gold'){
+    osc.type='triangle';
+    osc.frequency.setValueAtTime(900,t); osc.frequency.exponentialRampToValueAtTime(1600,t+0.18);
+    gain.gain.exponentialRampToValueAtTime(0.001, t+0.3);
+  } else if(type==='bomb'){
+    osc.type='sawtooth';
+    osc.frequency.setValueAtTime(160,t); osc.frequency.exponentialRampToValueAtTime(40,t+0.3);
+    gain.gain.exponentialRampToValueAtTime(0.001, t+0.32);
+  } else if(type==='heart'){
+    osc.type='sine';
+    osc.frequency.setValueAtTime(500,t); osc.frequency.exponentialRampToValueAtTime(800,t+0.2);
+    gain.gain.exponentialRampToValueAtTime(0.001, t+0.25);
+  } else if(type==='bolt'){
+    osc.type='square';
+    osc.frequency.setValueAtTime(300,t); osc.frequency.exponentialRampToValueAtTime(1000,t+0.15);
+    gain.gain.exponentialRampToValueAtTime(0.001, t+0.2);
+  } else if(type==='levelup'){
+    osc.type='triangle';
+    osc.frequency.setValueAtTime(440,t);
+    osc.frequency.setValueAtTime(660,t+0.1);
+    osc.frequency.setValueAtTime(880,t+0.2);
+    gain.gain.exponentialRampToValueAtTime(0.001, t+0.45);
+  } else if(type==='gameover'){
+    osc.type='sawtooth';
+    osc.frequency.setValueAtTime(300,t); osc.frequency.exponentialRampToValueAtTime(60,t+0.6);
+    gain.gain.exponentialRampToValueAtTime(0.001, t+0.6);
+  } else if(type==='click'){
+    osc.frequency.setValueAtTime(600,t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t+0.08);
+  } else if(type==='boss_hit'){
+    osc.type='square';
+    osc.frequency.setValueAtTime(80,t); osc.frequency.exponentialRampToValueAtTime(40,t+0.25);
+    gain.gain.setValueAtTime(vol*1.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t+0.28);
+  } else if(type==='boss_defeat'){
+    osc.type='triangle';
+    osc.frequency.setValueAtTime(300,t);
+    osc.frequency.setValueAtTime(450,t+0.15);
+    osc.frequency.setValueAtTime(600,t+0.3);
+    osc.frequency.setValueAtTime(900,t+0.45);
+    gain.gain.exponentialRampToValueAtTime(0.001, t+0.7);
+  } else if(type==='boss_attack'){
+    osc.type='sawtooth';
+    osc.frequency.setValueAtTime(200,t); osc.frequency.exponentialRampToValueAtTime(60,t+0.2);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t+0.22);
+  }
+  osc.start(t);
+  osc.stop(t + 0.7);
+}
+// 🎵 Farm-theme background music — G major, 125 BPM, melody + harmony + bass + percussion
+const bgMusic = (()=>{
+  let _on=false,_vol=0.65,_mut=false,_step=0,_t=null;
+  const STEP_MS=60000/125/2; // 8th notes @ 125 BPM = 240ms
+  // Melody: G4 B4 D5 — E5 D5 B4 — C5 E5 G5 — E5 D5 B4 G4
+  const MEL=[392,493.88,587.33,0,659.25,587.33,493.88,0,523.25,659.25,783.99,0,659.25,587.33,493.88,392];
+  // Harmony: sustained chord tones
+  const HARM=[587.33,0,587.33,0,659.25,0,587.33,0,523.25,0,783.99,0,659.25,0,587.33,0];
+  // Bass: G3 on I, C3 on IV, D3 on V
+  const BASS=[196,0,0,0,130.81,0,0,0,146.83,0,0,0,196,0,0,0];
+  function mkNoise(dur){
+    if(!audioCtx) return null;
+    const buf=audioCtx.createBuffer(1,Math.ceil(audioCtx.sampleRate*dur),audioCtx.sampleRate);
+    const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return buf;
+  }
+  function tick(){
+    if(!_on||_mut)return;
+    if(!audioCtx){_t=setTimeout(tick,STEP_MS);return;}
+    const v=_vol,t=audioCtx.currentTime,s=STEP_MS/1000,st=_step%16;
+    // Melody (triangle — bright & warm)
+    if(MEL[st]){
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type='triangle';o.frequency.value=MEL[st];
+      g.gain.setValueAtTime(v*0.30,t);g.gain.exponentialRampToValueAtTime(0.001,t+s*0.82);
+      o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+s);
+    }
+    // Harmony (sine — soft fill, every 2 steps)
+    if(st%2===0&&HARM[st]){
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type='sine';o.frequency.value=HARM[st];
+      g.gain.setValueAtTime(v*0.11,t);g.gain.exponentialRampToValueAtTime(0.001,t+s*1.8);
+      o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+s*2);
+    }
+    // Bass (sine — on beats = every 4 steps)
+    if(st%4===0&&BASS[st]){
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type='sine';o.frequency.value=BASS[st];
+      g.gain.setValueAtTime(v*0.22,t);g.gain.exponentialRampToValueAtTime(0.001,t+s*3.5);
+      o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+s*4);
+    }
+    // Kick drum (beat 1 & 3 = step 0, 8)
+    if(st===0||st===8){
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type='sine';o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(40,t+0.07);
+      g.gain.setValueAtTime(v*0.68,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.1);
+      o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+0.12);
+    }
+    // Snare (beat 2 & 4 = step 4, 12)
+    if(st===4||st===12){
+      const buf=mkNoise(0.1);if(buf){
+        const src=audioCtx.createBufferSource(),flt=audioCtx.createBiquadFilter(),g=audioCtx.createGain();
+        src.buffer=buf;flt.type='highpass';flt.frequency.value=2500;
+        g.gain.setValueAtTime(v*0.24,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.08);
+        src.connect(flt);flt.connect(g);g.connect(audioCtx.destination);src.start(t);
+      }
+    }
+    // Hi-hat (every even step)
+    if(st%2===0){
+      const buf=mkNoise(0.03);if(buf){
+        const src=audioCtx.createBufferSource(),flt=audioCtx.createBiquadFilter(),g=audioCtx.createGain();
+        src.buffer=buf;flt.type='highpass';flt.frequency.value=8000;
+        g.gain.setValueAtTime(v*0.07,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.025);
+        src.connect(flt);flt.connect(g);g.connect(audioCtx.destination);src.start(t);
+      }
+    }
+    _step++;_t=setTimeout(tick,STEP_MS);
+  }
+  return{
+    get volume(){return _vol;},set volume(v){_vol=parseFloat(v)||0.4;},
+    get muted(){return _mut;},
+    set muted(v){_mut=v;if(v&&_t){clearTimeout(_t);_t=null;}},
+    play(){if(_on||_mut)return Promise.resolve();_on=true;tick();return Promise.resolve();},
+    pause(){_on=false;clearTimeout(_t);_t=null;_step=0;}
+  };
+})();
+
+// 🔴 Boss battle music — A minor, 158 BPM, sawtooth/square, heavy percussion
+const bossMusic = (()=>{
+  let _on=false,_vol=0.65,_mut=false,_step=0,_t=null;
+  const STEP_MS=60000/158/2; // 8th notes @ 158 BPM ≈ 190ms
+  // Melody: A4 G4 A4 — E4 G4 — F4 E4 D4 — C4 D4 A4
+  const MEL=[440,0,392,440,329.63,0,392,0,349.23,329.63,0,0,261.63,293.66,440,0];
+  // Bass: A2 — E2 — F2 — E2 (driving power bass)
+  const BASS=[110,0,110,0,82.41,0,82.41,0,87.31,0,82.41,0,65.41,0,82.41,0];
+  // Arp fills (octave above melody on off-beats)
+  const ARP=[0,880,0,0,0,659.25,0,0,0,0,659.25,0,0,587.33,0,880];
+  function mkNoise(dur){
+    if(!audioCtx) return null;
+    const buf=audioCtx.createBuffer(1,Math.ceil(audioCtx.sampleRate*dur),audioCtx.sampleRate);
+    const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return buf;
+  }
+  function tick(){
+    if(!_on||_mut)return;
+    if(!audioCtx){_t=setTimeout(tick,STEP_MS);return;}
+    const v=_vol,t=audioCtx.currentTime,s=STEP_MS/1000,st=_step%16;
+    // Melody (sawtooth — aggressive)
+    if(MEL[st]){
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type='sawtooth';o.frequency.value=MEL[st];
+      g.gain.setValueAtTime(v*0.24,t);g.gain.exponentialRampToValueAtTime(0.001,t+s*0.72);
+      o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+s);
+    }
+    // Arp (triangle — sharp fill on off-beats)
+    if(ARP[st]){
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type='triangle';o.frequency.value=ARP[st];
+      g.gain.setValueAtTime(v*0.14,t);g.gain.exponentialRampToValueAtTime(0.001,t+s*0.5);
+      o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+s);
+    }
+    // Bass (square — heavy, every 2 steps)
+    if(st%2===0&&BASS[st]){
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type='square';o.frequency.value=BASS[st];
+      g.gain.setValueAtTime(v*0.17,t);g.gain.exponentialRampToValueAtTime(0.001,t+s*1.85);
+      o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+s*2);
+    }
+    // Heavy kick (every beat = every 2 steps)
+    if(st%2===0){
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type='sine';o.frequency.setValueAtTime(190,t);o.frequency.exponentialRampToValueAtTime(35,t+0.065);
+      g.gain.setValueAtTime(v*0.78,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.09);
+      o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+0.11);
+    }
+    // Snare (beats 2 & 4 = steps 4, 12)
+    if(st===4||st===12){
+      const buf=mkNoise(0.12);if(buf){
+        const src=audioCtx.createBufferSource(),flt=audioCtx.createBiquadFilter(),g=audioCtx.createGain();
+        src.buffer=buf;flt.type='bandpass';flt.frequency.value=1400;flt.Q.value=0.7;
+        g.gain.setValueAtTime(v*0.38,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.1);
+        src.connect(flt);flt.connect(g);g.connect(audioCtx.destination);src.start(t);
+      }
+    }
+    // Fast hi-hat (every step)
+    {
+      const buf=mkNoise(0.025);if(buf){
+        const src=audioCtx.createBufferSource(),flt=audioCtx.createBiquadFilter(),g=audioCtx.createGain();
+        src.buffer=buf;flt.type='highpass';flt.frequency.value=9000;
+        g.gain.setValueAtTime(v*0.058,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.018);
+        src.connect(flt);flt.connect(g);g.connect(audioCtx.destination);src.start(t);
+      }
+    }
+    _step++;_t=setTimeout(tick,STEP_MS);
+  }
+  return{
+    get volume(){return _vol;},set volume(v){_vol=parseFloat(v)||0.4;},
+    get muted(){return _mut;},
+    set muted(v){_mut=v;if(v&&_t){clearTimeout(_t);_t=null;}},
+    play(){if(_on||_mut)return Promise.resolve();_on=true;tick();return Promise.resolve();},
+    pause(){_on=false;clearTimeout(_t);_t=null;_step=0;}
+  };
+})();
+
+$('volMusic').oninput = ()=>{
+  const v = parseFloat($('volMusic').value);
+  bgMusic.volume = v; bossMusic.volume = v;
+  localStorage.setItem('volMusic', $('volMusic').value);
+};
+$('volSFX').oninput = ()=>{ localStorage.setItem('volSFX', $('volSFX').value); };
+function tryPlayMusic(){
+  const vol = parseFloat($('volMusic').value || 0.4);
+  bgMusic.volume = vol; bossMusic.volume = vol;
+  bgMusic.muted = muted; bossMusic.muted = muted;
+  if(bossActive){ bossMusic.play(); } else { bgMusic.play(); }
+}
+function applyMuteUI(){
+  const btn = $('muteBtn');
+  if(btn) btn.textContent = muted ? '🔇' : '🔊';
+  bgMusic.muted = muted; bossMusic.muted = muted;
+}
+function vibrate(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
+
+/* ===================== TIỆN ÍCH ===================== */
+function showScreen(id, show){ $(id).style.display = show ? 'flex' : 'none'; }
+function rand(min,max){ return Math.random()*(max-min)+min; }
+function pickItemType(){
+  const bombW = DIFFICULTY[difficulty].bombWeight;
+  const types = ITEM_TYPES.map(t => t.key==='bomb' ? Object.assign({}, t, {weight:bombW}) : t);
+  const total = types.reduce((s,t)=>s+t.weight,0);
+  let r = Math.random()*total;
+  for(const t of types){ if(r<t.weight) return t; r-=t.weight; }
+  return types[0];
+}
+function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+function measureContainer(){
+  const rect = container.getBoundingClientRect();
+  cW = rect.width; cH = rect.height;
+  basketX = clamp(basketX, 0, cW-BASKET_W);
+  basket.style.left = basketX+'px';
+}
+window.addEventListener('resize', measureContainer);
+window.addEventListener('orientationchange', ()=>setTimeout(measureContainer,200));
+
+function toast(text){
+  const d = document.createElement('div');
+  d.className='toast'; d.textContent=text;
+  container.appendChild(d);
+  setTimeout(()=>d.remove(), 2000);
+}
+function popup(text,x,y,color){
+  const d = document.createElement('div');
+  d.className='popup-text'; d.textContent=text; d.style.color=color||'#fff';
+  d.style.left=x+'px'; d.style.top=y+'px';
+  container.appendChild(d);
+  setTimeout(()=>d.remove(),700);
+}
+
+/* ===================== LEADERBOARD & ACHIEVEMENTS ===================== */
+function getLeaderboard(){ return JSON.parse(localStorage.getItem('leaderboard')||'[]'); }
+function renderLeaderboard(highlightName, highlightScore){
+  const scores = getLeaderboard().sort((a,b)=>b.score-a.score).slice(0,10);
+  $('highScoreList').innerHTML = scores.length ? scores.map((it,i)=>
+    `<div class="${(it.name===highlightName && it.score===highlightScore)?'me':''}">${i+1}. ${escapeHtml(it.name)}<span>${it.score}</span></div>`
+  ).join('') : '<div style="opacity:.6;text-align:center;">Chưa có điểm nào — hãy là người đầu tiên!</div>';
+}
+function escapeHtml(s){ return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function saveScore(name, sc){
+  const scores = getLeaderboard();
+  // 🔴 FIX: one entry per name — keep highest score only
+  const idx = scores.findIndex(s => s.name === name);
+  if(idx >= 0){
+    if(sc > scores[idx].score){ scores[idx].score = sc; scores[idx].date = Date.now(); }
+  } else {
+    scores.push({name, score:sc, date:Date.now()});
+  }
+  scores.sort((a,b)=>b.score-a.score);
+  localStorage.setItem('leaderboard', JSON.stringify(scores.slice(0,50)));
+  const prevBest = parseInt(localStorage.getItem('bestScore')||'0');
+  const isRecord = sc > prevBest;
+  if(isRecord) localStorage.setItem('bestScore', String(sc));
+  best = Math.max(prevBest, sc);
+  updateBestLine();
+  return isRecord;
+}
+function updateBestLine(){
+  const el = $('bestScoreLine');
+  if(el) el.textContent = 'Điểm cao nhất: '+best;
+}
+
+function unlockedAchievements(){ return JSON.parse(localStorage.getItem('achievements')||'[]'); }
+function unlockAch(key){
+  const list = unlockedAchievements();
+  if(list.includes(key)) return;
+  list.push(key);
+  localStorage.setItem('achievements', JSON.stringify(list));
+  const ach = ACHIEVEMENTS.find(a=>a.key===key);
+  if(ach) toast('🏅 Mở khóa: '+ach.label);
+  renderAchievements();
+}
+function renderAchievements(){
+  const unlocked = unlockedAchievements();
+  const line = $('achLine'); const panel = $('achPanel');
+  if(line) line.textContent = `🏅 Thành tích: ${unlocked.length}/${ACHIEVEMENTS.length}`;
+  if(panel) panel.innerHTML = ACHIEVEMENTS.map(a=>
+    `<div class="${unlocked.includes(a.key)?'unlocked':''}">${unlocked.includes(a.key)?'✅':'🔒'} ${a.label}</div>`
+  ).join('');
+}
+
+/* ===================== SKIN & THEME ===================== */
+function buildSkinGrid(){
+  const sel = localStorage.getItem('selectedSkin') || SKINS[0].url;
+  $('skinList').innerHTML = SKINS.map(s=>`
+    <div class="skin-item ${s.url===sel?'selected':''}" data-url="${s.url}" data-name="${s.name}">
+      <div class="skin-thumb" style="background-image:url('${s.url}')" data-fallback="${s.emoji}"></div>
+      <span>${s.name}</span>
+    </div>`).join('');
+  document.querySelectorAll('.skin-thumb').forEach(div=>{
+    const img = new Image();
+    img.onerror = ()=>{ div.style.backgroundImage='none'; div.textContent = div.dataset.fallback; };
+    img.src = div.style.backgroundImage.slice(5,-2);
+  });
+  document.querySelectorAll('.skin-item').forEach(el=>{
+    el.onclick = ()=>{
+      sfx('click');
+      document.querySelectorAll('.skin-item').forEach(x=>x.classList.remove('selected'));
+      el.classList.add('selected');
+      localStorage.setItem('selectedSkin', el.dataset.url);
+      applySkin();
+    };
+  });
+}
+function applySkin(){
+  const url = localStorage.getItem('selectedSkin') || SKINS[0].url;
+  basket.style.backgroundImage = "url('"+url+"')";
+  basket.textContent='';
+  const img = new Image();
+  img.onerror = ()=>{ basket.style.backgroundImage='none'; basket.style.fontSize='70px'; basket.style.textAlign='center'; basket.style.lineHeight=BASKET_H+'px'; basket.textContent='🧺'; };
+  img.src = url;
+}
+function closeSkinScreen(){
+  showScreen('skinScreen', false);
+  showScreen('menuScreen', true);
+}
+
+function buildClouds(){
+  const layer = container;
+  for(let i=0;i<4;i++){
+    const c = document.createElement('div');
+    c.className='cloud';
+    const w = rand(40,80), h=w*0.45;
+    c.style.width=w+'px'; c.style.height=h+'px';
+    c.style.top = rand(10,30+i*5)+'%';
+    c.style.left = rand(0,90)+'%';
+    const dur = rand(18,34);
+    c.style.animation = `driftCloud ${dur}s linear infinite`;
+    c.style.animationDelay = (-rand(0,dur))+'s';
+    layer.appendChild(c);
+  }
+  const styleTag = document.createElement('style');
+  styleTag.textContent = `@keyframes driftCloud{0%{transform:translateX(-30px)}100%{transform:translateX(${cW+60}px)}}`;
+  document.head.appendChild(styleTag);
+}
+function buildStars(){
+  const box=$('stars');
+  for(let i=0;i<25;i++){
+    const s=document.createElement('div');
+    s.className='star';
+    s.style.top=rand(0,100)+'%'; s.style.left=rand(0,100)+'%';
+    s.style.opacity = rand(.3,1);
+    box.appendChild(s);
+  }
+}
+function applyTheme(){
+  const theme = DAY_THEMES[(level-1)%DAY_THEMES.length];
+  container.style.background = `linear-gradient(to bottom, ${theme.top} 0%, ${theme.bottom} 65%, ${theme.bottom} 100%)`;
+  $('sun').style.opacity = theme.sun;
+  $('stars').style.opacity = theme.stars;
+}
+
+/* ===================== ĐỘ KHÓ & SPAWN ===================== */
+function fallSpeed(){
+  // Base 160 px/s + 35 per level, cap 780. Hard hits cap ~Lv 11.
+  return Math.min(780, (160 + (level-1)*35) * DIFFICULTY[difficulty].speedMult);
+}
+function spawnIntervalMs(){
+  // Spawn interval drops 85 ms per level; floor 200 ms. Hard hits floor ~Lv 9.
+  return Math.max(200, (1050 - (level-1)*85) * DIFFICULTY[difficulty].spawnMult);
+}
+function maxSimultaneous(){
+  // Hard: starts at 2 simultaneous, reaches 6 by Lv 9
+  if(difficulty==='hard') return Math.min(6, level>=9?6:level>=6?5:level>=4?4:level>=2?3:2);
+  // Normal/Easy: unchanged curve, cap 5
+  return Math.min(5, level>=8?4:level>=5?3:level>=3?2:1);
+}
+
+function getItemFromPool(){
+  return itemPool.length > 0 ? itemPool.pop() : null;
+}
+
+function spawnItem(){
+  if(state!=='playing') return;
+  if(items.length >= maxSimultaneous()) return;
+  const type = pickItemType();
+  let el = null;
+  const pooled = getItemFromPool();
+  if(pooled && pooled.el && !pooled.el.parentNode){
+    el = pooled.el;
+  } else {
+    el = document.createElement('div');
+    el.className='fallItem';
+  }
+  el.textContent = type.emoji;
+  const w=36, h=36;
+  const x = rand(4, Math.max(4,cW-w-4));
+  el.style.left = x+'px'; el.style.top = '-40px';
+  container.appendChild(el);
+  const item = pooled || {el, x:0, y:0, w, h, vy:0, type:null, caught:false};
+  item.x = x;
+  item.y = -40;
+  item.vy = fallSpeed()*rand(0.9,1.15);
+  item.type = type;
+  item.caught = false;
+  items.push(item);
+}
+function scheduleSpawns(){
+  clearTimeout(spawnTimer);
+  if(state!=='playing') return;
+  spawnItem();
+  spawnTimer = setTimeout(scheduleSpawns, spawnIntervalMs());
+}
+
+function currentMultiplier(){
+  let m = 1 + Math.min(2, Math.floor(combo/5)*0.5);
+  if(Date.now() < multiplierBoostUntil) m *= 2;
+  return m;
+}
+
+function catchGood(item){
+  const mult = currentMultiplier();
+  const gained = Math.round(item.type.score * mult) || 0;
+  if(item.type.key==='heart'){
+    if(lives < MAX_LIVES){ lives++; $('lives').textContent=lives; popup('+1 ❤️', item.x, item.y, '#ff6b81'); sfx('heart'); toast('❤️ Hồi 1 mạng!'); }
+    else { popup('Đầy mạng!', item.x, item.y, '#fff'); }
+  } else if(item.type.key==='bolt'){
+    multiplierBoostUntil = Date.now()+5000;
+    popup('x2 ĐIỂM!', item.x, item.y, '#ffe066');
+    sfx('bolt'); toast('⚡ Nhân đôi điểm trong 5 giây!');
+  } else {
+    combo++;
+    bestCombo = Math.max(bestCombo, combo);
+    score += gained;
+    $('score').textContent = score;
+    popup('+'+gained, item.x, item.y, item.type.key==='gold' ? '#ffd700' : '#fff');
+    sfx(item.type.key==='gold' ? 'gold' : 'catch');
+    updateCombo();
+    resetComboTimeout();   // 🟢 restart idle countdown
+    checkLevelUp();
+    updateLevelProgress(); // 🟡 refresh bar
+    unlockAch('first_egg');
+    if(item.type.key==='gold') unlockAch('goldEgg');
+    if(combo>=10) unlockAch('combo10');
+    if(score>=50) unlockAch('score50');
+    if(score>=100) unlockAch('score100');
+    if(score>=200) unlockAch('score200');
+  }
+  basket.classList.remove('bounce'); void basket.offsetWidth; basket.classList.add('bounce');
+}
+function catchBad(item){
+  combo = 0; updateCombo(); hideComboTimer(); // 🟢
+  lives--;
+  $('lives').textContent = lives;
+  popup('-1 💔', item.x, item.y, '#ff4d4d');
+  sfx('bomb');
+  vibrate(120);
+  basket.classList.remove('shake'); void basket.offsetWidth; basket.classList.add('shake');
+  $('flash').classList.remove('go'); void $('flash').offsetWidth; $('flash').classList.add('go');
+  if(lives<=0) endGame();
+}
+function missGood(item){
+  if(item.type.kind==='good' && item.type.key!=='heart' && item.type.key!=='bolt'){
+    combo = 0; updateCombo(); hideComboTimer(); // 🟢
+    lives--;
+    $('lives').textContent = lives;
+    if(lives<=0) endGame();
+  }
+}
+function updateCombo(){
+  const board = $('comboBoard');
+  if(combo>=2){
+    board.style.opacity='1';
+    board.textContent = `🔥 Combo x${combo} (điểm x${currentMultiplier().toFixed(1)})`;
+  } else {
+    board.style.opacity='0';
+  }
+}
+// 🟡 Refresh level progress bar
+function updateLevelProgress(){
+  const fill=$('levelProgressFill');
+  if(!fill)return;
+  fill.style.width=(Math.min(99.9,(score%40)/40)*100)+'%';
+}
+
+// 🟢 Combo timeout helpers
+function hideComboTimer(){
+  const b=$('comboTimerBar');if(b)b.style.opacity='0';
+  clearTimeout(comboTimeoutId);comboTimeoutId=null;
+}
+function resetComboTimeout(){
+  clearTimeout(comboTimeoutId);
+  if(combo<=0){hideComboTimer();return;}
+  // Harder mode = shorter window to keep combo alive
+  const MS = difficulty==='hard' ? 2000 : difficulty==='easy' ? 4200 : 3000;
+  const b=$('comboTimerBar'),f=$('comboTimerFill');
+  if(b&&f){
+    b.style.opacity='1';
+    f.style.transition='none';f.style.width='100%';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      f.style.transition=`width ${MS}ms linear`;
+      f.style.width='0%';
+    }));
+  }
+  comboTimeoutId=setTimeout(()=>{
+    if(combo>0){combo=0;updateCombo();}
+    hideComboTimer();
+  },MS);
+}
+
+function checkLevelUp(){
+  const newLevel = Math.floor(score/40)+1;
+  if(newLevel>level){
+    level = newLevel;
+    $('level').textContent = level;
+    applyTheme();
+    sfx('levelup');
+    const banner = $('levelBanner');
+    banner.textContent = `🎉 LEVEL ${level}!`;
+    banner.classList.add('show');
+    setTimeout(()=>banner.classList.remove('show'), 1100);
+    if(level>=5) unlockAch('level5');
+    if(level>=10) unlockAch('level10');
+    if(level>=50 && !bossHasTriggered){
+      bossHasTriggered = true;
+      setTimeout(()=>triggerBossDialog(), 600);
+    }
+  }
+}
+
+/* ===================== BOSS ===================== */
+function triggerBossDialog(){
+  if(state!=='playing') return;
+  state = 'boss_dialog';
+  clearTimeout(spawnTimer);
+  cancelAnimationFrame(rafId);
+  bgMusic.pause();
+  items.forEach(it=>it.el.remove()); items=[];
+  const dlg = $('bossDialog');
+  dlg.style.display='flex';
+  sfx('boss_attack');
+  const flash = $('flash');
+  flash.style.background = '#ff0000';
+  flash.classList.add('go');
+  setTimeout(()=>{ flash.style.background = 'var(--danger)'; }, 800);
+  setTimeout(()=>{
+    dlg.style.display='none';
+    startBossFight();
+  }, 3500);
+}
+
+function startBossFight(){
+  bossActive = true;
+  bossMaxHP = 300 + (DIFFICULTY[difficulty].speedMult - 1)*150;
+  bossHP = bossMaxHP;
+  bossPhase = 'idle';
+  state = 'boss_fight';
+  container.style.background = 'linear-gradient(to bottom, #8B0000 0%, #ff4757 40%, #c0392b 100%)';
+  $('bossHealthBar').style.display='block';
+  updateBossHealthBar();
+  const ch = $('bossChickenEl');
+  ch.style.display='block';
+  ch.style.fontSize = '62px';
+  bossChickenX = cW/2;
+  bossChickenY = -40;
+  ch.style.left = (bossChickenX - 35)+'px';
+  ch.style.top = bossChickenY+'px';
+  lastTs=0;
+  bgMusic.pause();
+  tryPlayMusic(); // plays bossMusic since bossActive=true
+  rafId = requestAnimationFrame(bossLoop);
+  scheduleBossAttack();
+  scheduleBossWeapons();
+}
+
+function updateBossHealthBar(){
+  const pct = Math.max(0, (bossHP/bossMaxHP)*100);
+  $('bossHealthFill').style.width = pct+'%';
+  if(pct < 30) $('bossHealthFill').style.background = 'linear-gradient(to right,#e84393,#ff4757)';
+}
+
+function scheduleBossAttack(){
+  if(state!=='boss_fight') return;
+  const delay = 1800 + Math.random()*1200;
+  bossDiveTimer = setTimeout(()=>{
+    if(state!=='boss_fight') return;
+    doBossDive();
+  }, delay);
+}
+
+function doBossDive(){
+  if(state!=='boss_fight') return;
+  bossPhase = 'diving';
+  bossChickenX = rand(30, cW-60);
+  const ch = $('bossChickenEl');
+  ch.style.left=(bossChickenX-30)+'px';
+  ch.style.top='-40px';
+  bossDiveTarget = cH * 0.55;
+  sfx('boss_attack');
+}
+
+function dosBossRetreat(){
+  bossPhase = 'retreating';
+  setTimeout(()=>{
+    bossPhase='idle';
+    const ch=$('bossChickenEl');
+    ch.style.top='-40px';
+    bossChickenY=-40;
+    scheduleBossAttack();
+  }, 500);
+}
+
+let bossWeaponTimer = null;
+function scheduleBossWeapons(){
+  if(state!=='boss_fight') return;
+  const delay = 600 + Math.random()*600;
+  bossWeaponTimer = setTimeout(()=>{
+    if(state!=='boss_fight') return;
+    spawnBossItem();
+    scheduleBossWeapons();
+  }, delay);
+}
+
+let bossItems=[];
+function spawnBossItem(){
+  if(state!=='boss_fight') return;
+  const isWeapon = Math.random()<0.6;
+  if(isWeapon){
+    const pool = BOSS_ITEM_TYPES;
+    const total=pool.reduce((s,t)=>s+t.weight,0);
+    let r=Math.random()*total;
+    let type=pool[0];
+    for(const t of pool){if(r<t.weight){type=t;break;}r-=t.weight;}
+    const el=document.createElement('div');
+    el.className='fallItem';
+    el.textContent=type.emoji;
+    el.style.fontSize='34px';
+    const x=rand(4,cW-44);
+    el.style.left=x+'px'; el.style.top='-44px';
+    container.appendChild(el);
+    bossItems.push({el,x,y:-44,w:36,h:36,vy:fallSpeed()*0.75,type,kind:'weapon',caught:false});
+  } else {
+    const pool=BOSS_HAZARD_TYPES;
+    const total=pool.reduce((s,t)=>s+t.weight,0);
+    let r=Math.random()*total;
+    let type=pool[0];
+    for(const t of pool){if(r<t.weight){type=t;break;}r-=t.weight;}
+    const el=document.createElement('div');
+    el.className='fallItem';
+    el.textContent=type.emoji;
+    el.style.fontSize='30px';
+    const x=rand(4,cW-44);
+    el.style.left=x+'px'; el.style.top='-44px';
+    container.appendChild(el);
+    bossItems.push({el,x,y:-44,w:32,h:32,vy:fallSpeed()*0.9,type,kind:'hazard',caught:false});
+  }
+}
+
+function bossLoop(ts){
+  if(state!=='boss_fight') return;
+  if(!lastTs) lastTs=ts;
+  const dt=Math.min(0.05,(ts-lastTs)/1000);
+  lastTs=ts;
+
+  let ch = $('bossChickenEl');
+  if(bossPhase==='diving'){
+    bossChickenY += 480*dt;
+    ch.style.top=bossChickenY+'px';
+    if(bossChickenY>=bossDiveTarget){
+      const bx=bossChickenX, by=bossChickenY;
+      const px=basketX+BASKET_W/2;
+      const py=cH-BASKET_BOTTOM-BASKET_H*0.4;
+      const dist=Math.sqrt((bx-px)**2+(by-py)**2);
+      if(dist<80){
+        lives--;
+        $('lives').textContent=lives;
+        popup('💥 -1 ❤️', bossChickenX, bossChickenY, '#ff4757');
+        sfx('bomb');
+        vibrate(200);
+        $('flash').classList.remove('go'); void $('flash').offsetWidth; $('flash').classList.add('go');
+        basket.classList.remove('shake'); void basket.offsetWidth; basket.classList.add('shake');
+        if(lives<=0){ cleanupBoss(); endGame(); return; }
+      }
+      dosBossRetreat();
+    }
+  } else if(bossPhase==='retreating'){
+    bossChickenY -= 340*dt;
+    if(bossChickenY< -40) bossChickenY=-40;
+    ch.style.top=bossChickenY+'px';
+  }
+
+  const br=basketRect();
+  for(let i=bossItems.length-1;i>=0;i--){
+    const it=bossItems[i];
+    it.y+=it.vy*dt;
+    it.el.style.top=it.y+'px';
+    if(!it.caught){
+      const overlap = 
+        (it.x < br.right) && 
+        (it.x + it.w > br.left) && 
+        (it.y + it.h > br.top) && 
+        (it.y < br.bottom);
+      if(overlap){
+        it.caught=true;
+        if(it.kind==='weapon'){
+          const dmg=it.type.dmg||15;
+          const targetX = bossChickenX;
+          const targetY = bossChickenY + 20;
+          it.el.style.transition = 'all 0.45s cubic-bezier(0.25, 0.1, 0.25, 1)';
+          it.el.style.left = targetX + 'px';
+          it.el.style.top = targetY + 'px';
+          it.el.style.transform = 'scale(0.7) rotate(30deg)';
+          setTimeout(()=>{
+            bossHP = Math.max(0, bossHP - dmg);
+            updateBossHealthBar();
+            popup('-' + dmg + '💥', targetX, targetY, '#ffd700');
+            sfx('boss_hit');
+            vibrate(40);
+            ch.style.filter = 'brightness(3)';
+            setTimeout(() => { if(ch) ch.style.filter = ''; }, 150);
+            if (bossHP <= 0) bossDefeated();
+            it.el.remove();
+          }, 480);
+          bossItems.splice(i, 1);
+          continue;
+        } else {
+          lives--;
+          $('lives').textContent=lives;
+          popup('💩 -1 ❤️', it.x, it.y, '#ff4757');
+          sfx('bomb');
+          vibrate(100);
+          $('flash').classList.remove('go'); void $('flash').offsetWidth; $('flash').classList.add('go');
+          basket.classList.remove('shake'); void basket.offsetWidth; basket.classList.add('shake');
+          if(lives<=0){ cleanupBoss(); endGame(); return; }
+          it.el.remove();
+          bossItems.splice(i,1);
+          continue;
+        }
+      }
+    }
+    if(it.y>cH){
+      it.el.remove();
+      bossItems.splice(i,1);
+    }
+  }
+
+  if(state==='boss_fight') rafId=requestAnimationFrame(bossLoop);
+}
+
+function bossDefeated(){
+  sfx('boss_defeat');
+  vibrate([50,30,50,30,200]);
+  cleanupBoss();
+  const vic=$('bossVictoryOverlay');
+  vic.style.display='flex';
+  setTimeout(()=>{
+    vic.style.display='none';
+    state='playing';
+    container.style.transition='background 1.2s ease';
+    applyTheme();
+    toast('🎉 Gà đã bỏ trốn! Tiếp tục!');
+    lastTs=0;
+    tryPlayMusic();
+    scheduleSpawns();
+    rafId=requestAnimationFrame(loop);
+  }, 2000);
+}
+
+function cleanupBoss(){
+  bossActive=false;
+  bossMusic.pause();
+  clearTimeout(bossDiveTimer);
+  clearTimeout(bossWeaponTimer);
+  bossItems.forEach(it=>it.el && it.el.remove()); bossItems=[];
+  $('bossHealthBar').style.display='none';
+  const ch=$('bossChickenEl');
+  ch.style.display='none';
+  bossPhase='idle';
+}
+function basketRect(){
+  const top = cH - BASKET_BOTTOM - BASKET_H*0.55;
+  return { left: basketX+8, right: basketX+BASKET_W-8, top, bottom: cH-BASKET_BOTTOM+10 };
+}
+function loop(ts){
+  if(state!=='playing'){ return; }
+  if(!lastTs) lastTs = ts;
+  const dt = Math.min(0.05, (ts-lastTs)/1000);
+  lastTs = ts;
+
+  const br = basketRect();
+  const len = items.length;
+  for(let i = len - 1; i >= 0; i--){
+    const it = items[i];
+    it.y += it.vy * dt;
+    it.el.style.top = it.y + 'px';
+
+    if(!it.caught){
+      const overlap = 
+        (it.x < br.right) && 
+        (it.x + it.w > br.left) && 
+        (it.y + it.h > br.top) && 
+        (it.y < br.bottom);
+
+      if(overlap){
+        it.caught = true;
+        if(it.type.kind==='bad') catchBad(it); else catchGood(it);
+        it.el.remove();
+        itemPool.push(it);
+        items.splice(i,1);
+        continue;
+      }
+    }
+
+    if(it.y > cH){
+      if(!it.caught) missGood(it);
+      it.el.remove();
+      itemPool.push(it);
+      items.splice(i,1);
+    }
+  }
+  if(state==='playing') rafId = requestAnimationFrame(loop);
+}
+
+/* ===================== CONTROLS ===================== */
+function setBasketLeft(px){
+  basketX = clamp(px - BASKET_W/2, 0, cW-BASKET_W);
+  basket.style.left = basketX+'px';
+}
+function setupControls(){
+  container.addEventListener('touchstart', onTouch, {passive:true});
+  container.addEventListener('touchmove', onTouch, {passive:true});
+  container.addEventListener('mousedown', e=>{ dragging=true; onMouse(e); });
+  window.addEventListener('mousemove', e=>{ if(dragging) onMouse(e); });
+  window.addEventListener('mouseup', ()=>dragging=false);
+  window.addEventListener('keydown', e=>{ keysDown[e.key]=true; });
+  window.addEventListener('keyup', e=>{ keysDown[e.key]=false; });
+  setInterval(()=>{
+    if(state!=='playing' && state!=='boss_fight') return;
+    const speed = 9;
+    if(keysDown['ArrowLeft']||keysDown['a']) setBasketLeft(basketX+BASKET_W/2-speed);
+    if(keysDown['ArrowRight']||keysDown['d']) setBasketLeft(basketX+BASKET_W/2+speed);
+  }, 16);
+  function onTouch(e){
+    if((state!=='playing' && state!=='boss_fight') || !e.touches[0]) return;
+    const rect = container.getBoundingClientRect();
+    setBasketLeft(e.touches[0].clientX - rect.left);
+  }
+  function onMouse(e){
+    if(state!=='playing' && state!=='boss_fight') return;
+    const rect = container.getBoundingClientRect();
+    setBasketLeft(e.clientX - rect.left);
+  }
+  window.addEventListener('keydown', e=>{
+    if(e.key==='Escape'){
+      if(state==='playing' || state==='boss_fight') pauseGame();
+      else if(state==='paused') resumeGame();
+    }
+  });
+}
+
+/* ===================== GAME FLOW ===================== */
+function startGame(){
+  ensureAudio();
+  // Use logged-in user name, fallback to input or 'Ẩn danh'
+  const user = (typeof Auth !== 'undefined') ? Auth.current() : null;
+  const nameInput = $('playerName') ? $('playerName').value.trim() : '';
+  const name = (user && user.name) || nameInput || localStorage.getItem('playerName') || 'Ẩn danh';
+  localStorage.setItem('playerName', name);
+
+  const startLives = DIFFICULTY[difficulty].startLives;
+  score=0; lives=startLives; level=1; combo=0; bestCombo=0; multiplierBoostUntil=0;
+  items.forEach(it=> {if(it.el) it.el.remove();});
+  itemPool = [];
+  items = [];
+  bossHasTriggered=false; bossActive=false;
+  cleanupBoss();
+  $('bossDialog').style.display='none';
+  $('bossVictoryOverlay').style.display='none';
+  $('score').textContent='0'; $('lives').textContent=String(startLives); $('level').textContent='1';
+  $('comboBoard').style.opacity='0';
+  hideComboTimer();       // 🟢 clear leftover timeout
+  updateLevelProgress();  // 🟡 reset bar to 0
+
+  measureContainer();
+  basketX = cW/2 - BASKET_W/2;
+  basket.style.left=basketX+'px';
+  applySkin();
+  applyTheme();
+
+  showScreen('menuScreen', false);
+  showScreen('howToScreen', false);
+  showScreen('skinScreen', false);
+  showScreen('settingScreen', false);
+  showScreen('overScreen', false);
+  hud.style.display='block';
+  basket.style.display='block';
+
+  state='playing';
+  lastTs=0;
+  tryPlayMusic();
+  scheduleSpawns();
+  rafId = requestAnimationFrame(loop);
+}
+function showCountdown(callback){
+  const overlay = $('countdownOverlay');
+  overlay.style.display = 'flex';
+  let count = 3;
+  function setNum(n){
+    // Force re-trigger animation by re-inserting the span
+    overlay.innerHTML = '';
+    const span = document.createElement('span');
+    span.textContent = n;
+    overlay.appendChild(span);
+  }
+  setNum(count);
+  const iv = setInterval(()=>{
+    count--;
+    if(count <= 0){
+      clearInterval(iv);
+      overlay.style.display = 'none';
+      callback();
+    } else {
+      setNum(count);
+    }
+  }, 1000);
+}
+function pauseGame(){
+  if(state!=='playing' && state!=='boss_fight') return;
+  state='paused';
+  clearTimeout(spawnTimer);
+  clearTimeout(bossDiveTimer);
+  clearTimeout(bossWeaponTimer);
+  cancelAnimationFrame(rafId);
+  bgMusic.pause(); bossMusic.pause();
+  settingsFromMenu = false;
+  $('resumeBtn').style.display='block';
+  $('restartBtn').style.display='block';
+  $('quitBtn').style.display='block';
+  $('closeSettingsBtn').style.display='none';
+  showScreen('settingScreen', true);
+}
+function resumeGame(){
+  if(state!=='paused') return;
+  showScreen('settingScreen', false);
+  showCountdown(()=>{
+    if(bossActive){
+      state='boss_fight';
+      lastTs=0;
+      tryPlayMusic(); // plays bossMusic
+      rafId=requestAnimationFrame(bossLoop);
+      scheduleBossAttack();
+      scheduleBossWeapons();
+    } else {
+      state='playing';
+      lastTs=0;
+      tryPlayMusic();
+      scheduleSpawns();
+      rafId = requestAnimationFrame(loop);
+    }
+  });
+}
+function openSettingsFromMenu(){
+  settingsFromMenu = true;
+  $('resumeBtn').style.display='none';
+  $('restartBtn').style.display='none';
+  $('quitBtn').style.display='none';
+  $('closeSettingsBtn').style.display='block';
+  showScreen('menuScreen', false);
+  showScreen('settingScreen', true);
+}
+function endGame(){
+  state='gameover';
+  clearTimeout(spawnTimer);
+  cancelAnimationFrame(rafId);
+  bgMusic.pause(); bossMusic.pause();
+  sfx('gameover');
+  vibrate([100,60,100]);
+  items.forEach(it => { if(it.el) it.el.remove(); });
+  itemPool = [];
+  items = [];
+  const name = localStorage.getItem('playerName') || 'Ẩn danh';
+  const isRecord = saveScore(name, score);
+  $('overScore').textContent = score;
+  $('overLevel').textContent = level;
+  $('overCombo').textContent = bestCombo;
+  $('overBest').textContent = best;
+  $('newRecord').style.display = isRecord ? 'block' : 'none';
+  renderLeaderboard(name, score);
+
+  // 🔵 Update persistent player data
+  if(window._htPlayerData){
+    const pd = window._htPlayerData;
+    pd.totalGames = (pd.totalGames||0) + 1;
+    pd.bestScore = Math.max(pd.bestScore||0, score);
+    pd.bestCombo = Math.max(pd.bestCombo||0, bestCombo);
+    pd.bestLevel = Math.max(pd.bestLevel||0, level);
+    savePlayerData();
+  }
+
+  setTimeout(()=>showScreen('overScreen', true), 350);
+}
+function goHome(){
+  state='menu';
+  clearTimeout(spawnTimer);
+  cancelAnimationFrame(rafId);
+  bgMusic.pause(); bossMusic.pause();
+  items.forEach(it => { if(it.el) it.el.remove(); });
+  itemPool = [];
+  items = [];
+  cleanupBoss();
+  bossHasTriggered=false;
+  $('bossDialog').style.display='none';
+  $('bossVictoryOverlay').style.display='none';
+  hud.style.display='none';
+  basket.style.display='none';
+  showScreen('settingScreen', false);
+  showScreen('overScreen', false);
+  showScreen('menuScreen', true);
+  renderLeaderboard();
+}
+
+/* ===================== INIT ===================== */
+window.addEventListener('load', ()=>{
+  // playerName input is hidden now (auth handles names), keep for internal compat
+  const savedName = localStorage.getItem('playerName') || '';
+  if($('playerName')) $('playerName').value = savedName;
+  $('volMusic').value = localStorage.getItem('volMusic') || '0.65';
+  $('volSFX').value = localStorage.getItem('volSFX') || '1.0';
+  best = parseInt(localStorage.getItem('bestScore')||'0');
+  updateBestLine();
+  renderLeaderboard();
+  renderAchievements();
+  buildSkinGrid();
+  applySkin();
+  applyMuteUI();
+  measureContainer();
+  buildClouds();
+  buildStars();
+  setupControls();
+
+  document.querySelectorAll('.diffBtn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.diff===difficulty);
+    b.onclick = ()=>{
+      sfx('click');
+      difficulty = b.dataset.diff;
+      localStorage.setItem('difficulty', difficulty);
+      document.querySelectorAll('.diffBtn').forEach(x=>x.classList.toggle('active', x===b));
+    };
+  });
+
+  $('achLine').onclick = ()=>{
+    const panel = $('achPanel');
+    panel.style.display = (panel.style.display==='block') ? 'none' : 'block';
+  };
+
+  $('muteBtn').onclick = ()=>{
+    muted = !muted;
+    localStorage.setItem('muted', muted?'1':'0');
+    applyMuteUI();
+    if(!muted) sfx('click');
+  };
+
+  $('playBtn').onclick = ()=>{ sfx('click'); startGame(); };
+  $('skinBtnMenu').onclick = ()=>{ sfx('click'); buildSkinGrid(); showScreen('menuScreen', false); showScreen('skinScreen', true); };
+  $('howToBtn').onclick = ()=>{ sfx('click'); showScreen('menuScreen', false); showScreen('howToScreen', true); };
+  $('backFromHowToBtn').onclick = ()=>{ sfx('click'); showScreen('howToScreen', false); showScreen('menuScreen', true); };
+  $('doneSkinBtn').onclick = ()=>{ sfx('click'); closeSkinScreen(); };
+  $('settingBtnMenu').onclick = ()=>{ sfx('click'); openSettingsFromMenu(); };
+  $('settingBtn').onclick = ()=>{ sfx('click'); pauseGame(); };
+  $('resumeBtn').onclick = ()=>{ sfx('click'); resumeGame(); };
+  $('restartBtn').onclick = ()=>{ sfx('click'); showScreen('settingScreen', false); startGame(); };
+  $('quitBtn').onclick = ()=>{ sfx('click'); goHome(); };
+  $('closeSettingsBtn').onclick = ()=>{ sfx('click'); showScreen('settingScreen', false); showScreen('menuScreen', true); };
+  $('retryBtn').onclick = ()=>{ sfx('click'); startGame(); };
+  $('homeBtn').onclick = ()=>{ sfx('click'); goHome(); };
+
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden && (state==='playing' || state==='boss_fight')) pauseGame();
+  });
+});
+
+})();
+</script>
+</body>
+</html>
